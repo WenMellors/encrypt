@@ -55,6 +55,7 @@ int main(){
     BYTE buf[SHA256_BLOCK_SIZE];
     BYTE * text;
     SHA256_CTX ctx;
+    int i;
     FILE * sha;
     // jwj work
     while(1){
