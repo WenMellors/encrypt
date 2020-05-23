@@ -91,6 +91,7 @@ int main(){
             fprintf(sha, "%x", buf[i]);
         }
         fclose(sha);
+        free(text);
         sha = fopen("./sha256.txt", "rb");
         fseek(sha,SEEK_SET,SEEK_END);
         shaSize=ftell(sha);
