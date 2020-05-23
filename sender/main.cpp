@@ -55,7 +55,7 @@ int main(){
     BYTE buf[SHA256_BLOCK_SIZE];
     BYTE * text;
     SHA256_CTX ctx;
-    unsigned char shaPath[] = "sha256.txt";
+    unsigned char shaPath[4097] = "sha256.txt";
     unsigned long shaSize;
     int i;
     FILE * sha;
@@ -90,6 +90,8 @@ int main(){
             printf("%x", buf[i]);
             fprintf(sha, "%x", buf[i]);
         }
+        fclose(sha);
+        sha = fopen("./sha256.txt", "rb");
         fseek(sha,SEEK_SET,SEEK_END);
         shaSize=ftell(sha);
         fseek(sha,0,SEEK_SET);
