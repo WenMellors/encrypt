@@ -56,6 +56,7 @@ int main(){
     BYTE * text;
     SHA256_CTX ctx;
     unsigned char shaPath[] = "./sha256.txt";
+    unsigned long shaSize;
     int i;
     FILE * sha;
     // jwj work
@@ -89,8 +90,11 @@ int main(){
             printf("%x", buf[i]);
             fprintf(sha, "%x", buf[i]);
         }
+        fseek(sha,SEEK_SET,SEEK_END);
+        shaSize=ftell(sha);
+        fseek(sha,0,SEEK_SET);
         memset(data_to_encrypt,0,sizeof(data_to_encrypt));
-        sendFile(sha, SHA256_BLOCK_SIZE, shaPath, data_to_encrypt, data_after_encrypt,&AESEncryptKey,clnt_sock);
+        sendFile(sha, shaSize, shaPath, data_to_encrypt, data_after_encrypt,&AESEncryptKey,clnt_sock);
         fclose(sha);
         // jwj work
         memset(data_to_encrypt,0,sizeof(data_to_encrypt));
