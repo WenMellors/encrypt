@@ -1,5 +1,5 @@
 #include "sender.h"
-
+#include "sha256.h"
 int main(){
     int serv_sock=getServerSocket("192.168.255.128",8000);
     printf("Sender socket ready.\n");
@@ -51,6 +51,12 @@ int main(){
     unsigned char data_after_encrypt[16];
     unsigned char *dae;
     unsigned long fsize;
+    // jwj work
+    BYTE buf[SHA256_BLOCK_SIZE];
+    BYTE * text;
+    SHA256_CTX ctx;
+    FILE * sha;
+    // jwj work
     while(1){
         memset(path,0,sizeof(path));
         printf("Please input path of the file you wanna send:\n");
@@ -66,6 +72,25 @@ int main(){
         fseek(fp,SEEK_SET,SEEK_END);
         fsize=ftell(fp);
         fseek(fp,0,SEEK_SET);
+        // jwj work
+        text = (BYTE *)malloc((fsize + 1) * sizeof(char)); // 因为 BYTE 就是 unsigned char 感觉没什么问题
+        fsize = fread(text, 1, fsize, fp);
+        text[fsize] = '\0';
+        // 进行 hash 散列值计算
+        sha256_init(&ctx);
+        sha256_update(&ctx, text, fsize);
+        sha256_final(&ctx, buf);
+        fseek(fp,0,SEEK_SET);
+        printf("sha256: 0x");
+        sha = fopen("./sha256.txt", "w");
+        for (i = 0; i < SHA256_BLOCK_SIZE; i++) {
+            printf("%x", buf[i]);
+            fprintf(sha, "%x", buf[i]);
+        }
+        memset(data_to_encrypt,0,sizeof(data_to_encrypt));
+        sendFile(sha, SHA256_BLOCK_SIZE, data_to_encrypt, data_after_encrypt,,&AESEncryptKey,clnt_sock);
+        fclose(sha);
+        // jwj work
         memset(data_to_encrypt,0,sizeof(data_to_encrypt));
         sendFile(fp,fsize,path,data_to_encrypt,data_after_encrypt,&AESEncryptKey,clnt_sock);
         fclose(fp);
