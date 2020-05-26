@@ -26,14 +26,16 @@ static const WORD k[64] = {
 };
 
 // 单次映射的 hash 函数
-void sha256_transform(SHA256_CTX* ctx, const BYTE data[])
-{
+void sha256_transform(CTX* ctx, const BYTE data[]) {
+  // 按照计算原理更新 hash 散列值
   WORD a, b, c, d, e, f, g, h, i, j, t1, t2, m[64];
-
-  for (i = 0, j = 0; i < 16; ++i, j += 4)
+  // 先将 256bit 数据扩充至 64 字大小
+  for (i = 0, j = 0; i < 16; ++i, j += 4) {
     m[i] = (data[j] << 24) | (data[j + 1] << 16) | (data[j + 2] << 8) | (data[j + 3]);
-  for (; i < 64; ++i)
+  }
+  for (; i < 64; ++i) {
     m[i] = SIG1(m[i - 2]) + m[i - 7] + SIG0(m[i - 15]) + m[i - 16];
+  }
 
   a = ctx->state[0];
   b = ctx->state[1];
@@ -43,7 +45,7 @@ void sha256_transform(SHA256_CTX* ctx, const BYTE data[])
   f = ctx->state[5];
   g = ctx->state[6];
   h = ctx->state[7];
-
+  // 轮次加密
   for (i = 0; i < 64; ++i) {
     t1 = h + EP1(e) + CH(e, f, g) + k[i] + m[i];
     t2 = EP0(a) + MAJ(a, b, c);
@@ -66,9 +68,9 @@ void sha256_transform(SHA256_CTX* ctx, const BYTE data[])
   ctx->state[6] += g;
   ctx->state[7] += h;
 }
-// 初始化第一个块
-void sha256_init(SHA256_CTX* ctx)
-{
+
+// 初始化消息块
+void sha256_init(CTX* ctx) {
   ctx->datalen = 0;
   ctx->bitlen = 0;
   ctx->state[0] = 0x6a09e667;
@@ -78,14 +80,15 @@ void sha256_init(SHA256_CTX* ctx)
   ctx->state[4] = 0x510e527f;
   ctx->state[5] = 0x9b05688c;
   ctx->state[6] = 0x1f83d9ab;
-  ctx->state[7] = 0x5be0cd19;
+  ctx->state[7] = 0x5be0cd19; // 赋予 8 个 hash 初值
 }
-// 完成块的映射
-void sha256_update(SHA256_CTX* ctx, const BYTE data[], size_t len)
-{
+
+// 迭代完成映射计算散列值
+void sha256_update(CTX* ctx, const BYTE data[], size_t len) {
   WORD i;
 
   for (i = 0; i < len; ++i) {
+    // 对 data 进行分块，分成 256bit 即 64 字节
     ctx->data[ctx->datalen] = data[i];
     ctx->datalen++;
     if (ctx->datalen == 64) {
@@ -96,27 +99,29 @@ void sha256_update(SHA256_CTX* ctx, const BYTE data[], size_t len)
   }
 }
 // 对最后一个数据块进行hash
-void sha256_final(SHA256_CTX* ctx, BYTE hash[])
+void sha256_final(CTX* ctx, BYTE hash[])
 {
   WORD i;
 
   i = ctx->datalen;
 
-  // Pad whatever data is left in the buffer.
-  if (ctx->datalen < 56) {
+  // 进行比特填充处理
+  if (ctx->datalen < 56) { // 如果现有数据数少于 448bit 直接填充至 448 即可
     ctx->data[i++] = 0x80;
     while (i < 56)
       ctx->data[i++] = 0x00;
   }
   else {
+    // 需要先填充至 64 字节，将这个数据块进行哈希映射，再重新填 56 字节
     ctx->data[i++] = 0x80;
-    while (i < 64)
+    while (i < 64) {
       ctx->data[i++] = 0x00;
-    sha256_transform(ctx, ctx->data); //  不太理解
-    memset(ctx->data, 0, 56);
+    }
+    sha256_transform(ctx, ctx->data); // 对刚填充的数据块进行哈希映射
+    memset(ctx->data, 0, 56); // 因为填的是 0 所以直接 memset 就可以了
   }
 
-  // Append to the padding the total message's length in bits and transform.
+  // 附加长度信息
   ctx->bitlen += ctx->datalen * 8;
   ctx->data[63] = ctx->bitlen;
   ctx->data[62] = ctx->bitlen >> 8;
@@ -126,18 +131,18 @@ void sha256_final(SHA256_CTX* ctx, BYTE hash[])
   ctx->data[58] = ctx->bitlen >> 40;
   ctx->data[57] = ctx->bitlen >> 48;
   ctx->data[56] = ctx->bitlen >> 56; // 附加原始信息长度
-  sha256_transform(ctx, ctx->data);
+  sha256_transform(ctx, ctx->data); // 对这最后一个块进行哈希映射
 
-  // Since this implementation uses little endian byte ordering and SHA uses big endian,
-  // reverse all the bytes when copying the final state to the output hash.
+  // 小端转大端输出
   for (i = 0; i < 4; ++i) {
-    hash[i] = (ctx->state[0] >> (24 - i * 8)) & 0x000000ff;
-    hash[i + 4] = (ctx->state[1] >> (24 - i * 8)) & 0x000000ff;
-    hash[i + 8] = (ctx->state[2] >> (24 - i * 8)) & 0x000000ff;
-    hash[i + 12] = (ctx->state[3] >> (24 - i * 8)) & 0x000000ff;
-    hash[i + 16] = (ctx->state[4] >> (24 - i * 8)) & 0x000000ff;
-    hash[i + 20] = (ctx->state[5] >> (24 - i * 8)) & 0x000000ff;
-    hash[i + 24] = (ctx->state[6] >> (24 - i * 8)) & 0x000000ff;
-    hash[i + 28] = (ctx->state[7] >> (24 - i * 8)) & 0x000000ff; // 输出 hash
+    // 向右移位，取低 8 位。
+    hash[i] = (ctx->state[0] >> (24 - i * 8)) & 0xff;
+    hash[i + 4] = (ctx->state[1] >> (24 - i * 8)) & 0xff;
+    hash[i + 8] = (ctx->state[2] >> (24 - i * 8)) & 0xff;
+    hash[i + 12] = (ctx->state[3] >> (24 - i * 8)) & 0xff;
+    hash[i + 16] = (ctx->state[4] >> (24 - i * 8)) & 0xff;
+    hash[i + 20] = (ctx->state[5] >> (24 - i * 8)) & 0xff;
+    hash[i + 24] = (ctx->state[6] >> (24 - i * 8)) & 0xff;
+    hash[i + 28] = (ctx->state[7] >> (24 - i * 8)) & 0xff;
   }
 }

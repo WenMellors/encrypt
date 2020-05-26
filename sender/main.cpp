@@ -54,7 +54,7 @@ int main(){
     // jwj work
     BYTE buf[SHA256_BLOCK_SIZE];
     BYTE * text;
-    SHA256_CTX ctx;
+    CTX ctx;
     unsigned char shaPath[4097] = "sha256.txt";
     unsigned long shaSize;
     int i;

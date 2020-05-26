@@ -8,7 +8,7 @@ int main() {
   BYTE * text;
   FILE * file;
   FILE * sha;
-  SHA256_CTX ctx;
+  CTX ctx;
   int i = 0;
   int flength = 0;
   // 读取文件数据

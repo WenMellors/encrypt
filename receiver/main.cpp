@@ -69,7 +69,7 @@ int main()
     char sha_s[64];
     int fsize;
     int i;
-    SHA256_CTX ctx;
+    CTX ctx;
     // jwj work
     strncpy((char*)aesSeed,(const char*)seed,32);
     AES_KEY AESDecryptKey;
