@@ -14,7 +14,7 @@ int main()
     struct sockaddr_in serv_addr;
     memset(&serv_addr, 0, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;  //ipv4
-    serv_addr.sin_addr.s_addr = inet_addr("192.168.255.128");  //ip address
+    serv_addr.sin_addr.s_addr = inet_addr("192.168.255.129");  //ip address
     serv_addr.sin_port = htons(8000);  //port
     int result=connect(sock, (struct sockaddr*)&serv_addr, sizeof(serv_addr));
     if(result==-1){

@@ -10,7 +10,7 @@ extern "C" {
 #include "aes.h"
 
 int main(){
-    int serv_sock=getServerSocket("192.168.255.128",8000);
+    int serv_sock=getServerSocket("192.168.255.129",8000);
     printf("Sender socket ready.\n");
     printf("Waiting for connection...\n");
     int clnt_sock=waitForConnection(serv_sock);
