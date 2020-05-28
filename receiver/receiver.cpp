@@ -89,7 +89,7 @@ int genSeed(unsigned char* ranstr){
     return i;
 }
 
-int recvFile(unsigned char *data_after_encrypt,unsigned char *data_after_decrypt,const unsigned char *AESDecryptKey,int sock){
+int recvFile(unsigned char *data_after_encrypt,unsigned char *data_after_decrypt,const unsigned char *AESDecryptKey,int sock, char* fn){
     unsigned long fsize=0;
     char fs[8];
     char p_fs[16];
@@ -101,7 +101,6 @@ int recvFile(unsigned char *data_after_encrypt,unsigned char *data_after_decrypt
     fsize=*((unsigned long*)fs);
     printf("File size:%lu\n",fsize);
     unsigned long times=((unsigned long)(fsize/16))+1;
-    char fn[256];
     memset(fn,0,sizeof(fn));
     char e_fn[256];
     memset(e_fn,0,sizeof(e_fn));

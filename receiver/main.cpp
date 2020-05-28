@@ -132,7 +132,7 @@ int main()
         //receive data
         printf("Wainting For File...\n");
         memset(data_after_encrypt,0,sizeof(data_after_encrypt));
-        recvFile(data_after_encrypt,data_after_decrypt,aes_exp_key,sock);
+        recvFile(data_after_encrypt,data_after_decrypt,aes_exp_key,sock, fn);
         // jwj work
         if (isSHA) {
             isSHA = false;

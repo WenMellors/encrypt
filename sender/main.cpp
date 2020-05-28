@@ -140,7 +140,7 @@ int main(){
         shaSize=ftell(sha);
         fseek(sha,0,SEEK_SET);
         memset(data_to_encrypt,0,sizeof(data_to_encrypt));
-        sendFile(sha, shaSize, shaPath, data_to_encrypt, data_after_encrypt,&AESEncryptKey,clnt_sock);
+        sendFile(sha, shaSize, shaPath, data_to_encrypt, data_after_encrypt,aes_exp_key,clnt_sock);
         printf("sha path:%s\n", shaPath);
         fclose(sha);
         // jwj work
