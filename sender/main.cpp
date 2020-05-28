@@ -122,6 +122,7 @@ int main(){
         text = (BYTE *)malloc((fsize + 1) * sizeof(char)); // 因为 BYTE 就是 unsigned char 感觉没什么问题
         fsize = fread(text, 1, fsize, fp);
         text[fsize] = '\0';
+        print("content: %s\n", text)
         // 进行 hash 散列值计算
         sha256_init(&ctx);
         sha256_update(&ctx, text, fsize);
