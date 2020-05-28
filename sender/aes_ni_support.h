@@ -1,0 +1,1 @@
+int is_aesni_support(void);

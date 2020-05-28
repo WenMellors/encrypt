@@ -1,4 +1,5 @@
 #include "receiver.h"
+#include "aes.h"
 
 int sendSeed(unsigned char *seed,int s_len,int sock){
     char* data=(char*)seed;
@@ -88,22 +89,25 @@ int genSeed(unsigned char* ranstr){
     return i;
 }
 
-int recvFile(unsigned char *data_after_encrypt,unsigned char *data_after_decrypt,AES_KEY *AESDecryptKey,int sock, char* fn){
+int recvFile(unsigned char *data_after_encrypt,unsigned char *data_after_decrypt,const unsigned char *AESDecryptKey,int sock){
     unsigned long fsize=0;
     char fs[8];
     char p_fs[16];
     char d_fs[16];
     recvEncryptedData((unsigned char*)p_fs,sizeof(p_fs),sock);
-    AES_decrypt((unsigned char*)p_fs, (unsigned char*)d_fs, AESDecryptKey);
+    // AES_decrypt((unsigned char*)p_fs, (unsigned char*)d_fs, AESDecryptKey);
+    aes_decrypt((unsigned char *) p_fs,(unsigned char *) d_fs, AESDecryptKey);
     strncpy(fs,(const char*)d_fs,8);
     fsize=*((unsigned long*)fs);
     printf("File size:%lu\n",fsize);
     unsigned long times=((unsigned long)(fsize/16))+1;
-    memset(fn,0, 256);
+    char fn[256];
+    memset(fn,0,sizeof(fn));
     char e_fn[256];
     memset(e_fn,0,sizeof(e_fn));
     recvEncryptedData((unsigned char*)e_fn,sizeof(e_fn),sock);
-    AES_decrypt((unsigned char*)e_fn, (unsigned char*)fn, AESDecryptKey);
+    // AES_decrypt((unsigned char*)e_fn, (unsigned char*)fn, AESDecryptKey);
+    aes_decrypt((unsigned char*)e_fn, (unsigned char*)fn, AESDecryptKey);
     printf("File name:%s\n",fn);
     FILE *fp;
     if((fp=fopen((const char*)fn,"wb"))==NULL){
@@ -113,7 +117,8 @@ int recvFile(unsigned char *data_after_encrypt,unsigned char *data_after_decrypt
     printf("Writing file...\n");
     for(int i=0;i<times;i++){
         recvEncryptedData(data_after_encrypt,16,sock);
-        AES_decrypt(data_after_encrypt, data_after_decrypt, AESDecryptKey);
+        // AES_decrypt(data_after_encrypt, data_after_decrypt, AESDecryptKey);
+        aes_decrypt(data_after_encrypt, data_after_decrypt, AESDecryptKey);
         if(i!=times-1){
             fwrite(data_after_decrypt,16,1,fp);
         }else{

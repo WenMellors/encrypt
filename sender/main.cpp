@@ -1,49 +1,92 @@
+extern "C" {
+#include "rsa.h" 
+}
 #include "sender.h"
 #include "sha256.h"
+#include <string>
+#include <sstream>
+#include <cstdlib>
+#include <cstdio>
+#include "aes.h"
+
 int main(){
-    int serv_sock=getServerSocket("192.168.255.128",8000);
+    int serv_sock=getServerSocket("192.168.116.128",8000);
     printf("Sender socket ready.\n");
     printf("Waiting for connection...\n");
     int clnt_sock=waitForConnection(serv_sock);
     printf("Connection built.\n");
     //1024-bits,RSA_F4-e_value,no callback
-    RSA *ClientRSA=RSA_generate_key(1024, RSA_F4, NULL, NULL);
+    struct public_key_class pub[1];
+    struct private_key_class priv[1];
+    RSA_gen_keys(pub, priv, PRIME_SOURCE_FILE);
     //print the rsa.
-    RSA_print_fp(stdout,ClientRSA,0);
-    unsigned char PublicKey[1024];
-    unsigned char *PKey=PublicKey;
-    //Extract the public key information into buffer. In case of changes on the PublicKey, we use pointer PKey.
-    int PublicKeyLen=i2d_RSAPublicKey(ClientRSA, &PKey);
-    //print public key length, needed later.
+    printf("Private Key:\n Modulus: %lld\n Exponent: %lld\n", (long long)priv->modulus, (long long) priv->exponent);
+    printf("Public Key:\n Modulus: %lld\n Exponent: %lld\n", (long long)pub->modulus, (long long) pub->exponent);
+    
+    // TOHEX
+    char PublicKey[1024];
+    sprintf(PublicKey, "%lld\0", pub->modulus);
+    int len = strlen((const char *)PublicKey);
+    sprintf(PublicKey + len, "0d%lld\0", pub->exponent);
+    int PublicKeyLen = strlen((const char*)PublicKey);
+    printf("PubKey: %s\n", PublicKey);
+    // unsigned char PublicKey[1024];
+    // unsigned char *PKey=PublicKey;
+    // //Extract the public key information into buffer. In case of changes on the PublicKey, we use pointer PKey.
+    // int PublicKeyLen=i2d_RSAPublicKey(ClientRSA, &PKey);
+    // //print public key length, needed later.
     printf("PublicKeyBuff, Len=%d\n", PublicKeyLen);
-    //print public key information for comparison
-    for (int i=0; i<PublicKeyLen; i++)
-    {
-        printf("0x%02x, ", *(PublicKey+i));
-    }
-    printf("\n");
+    // //print public key information for comparison
+    // for (int i=0; i<PublicKeyLen; i++)
+    // {
+    //     printf("0x%02x, ", *(PublicKey+i));
+    // }
+    // printf("\n");
     //send public key information and key length to receiver.
-    sendKey(PublicKey,PublicKeyLen,clnt_sock);
+    sendKey((unsigned char *)PublicKey,PublicKeyLen,clnt_sock);
     //Again, for comparison.
-    PKey = PublicKey;
-    RSA *EncryptRsa = d2i_RSAPublicKey(NULL, (const unsigned char**)&PKey, PublicKeyLen);
+    // PKey = PublicKey;
+    // RSA *EncryptRsa = d2i_RSAPublicKey(NULL, (const unsigned char**)&PKey, PublicKeyLen);
     printf("You can compare this with the public key on the receiver.\n");
-    RSA_print_fp(stdout,EncryptRsa,0);
+    // RSA_print_fp(stdout,EncryptRsa,0);
     //receive the encrypted seed.
-    unsigned char buffer[128];
+    unsigned char buffer[128*20];
     unsigned char *s_b=buffer;
-    recvSeed(s_b,128,clnt_sock);
-    printf("The encrypted seed is %s\n",buffer);
+    recvSeed(s_b,128*20,clnt_sock);
+    printf("The encrypted seed is\n");
     //decrypt the seed.
-    unsigned char outseed[128];
-    memset(outseed, 0, sizeof(outseed));
-    RSA_private_decrypt(128, (const unsigned char*)buffer, outseed, ClientRSA, RSA_NO_PADDING);
-    printf("The origin seed is %s\n",outseed);
+    // unsigned char outseed[128];
+    // memset(outseed, 0, sizeof(outseed));
+    long long seed[128];
+    int j = 0;
+    for (int i = 0; i < 128; ++i) {
+        long long num = 0;
+        for (j; buffer[j] != '\n' && j < 128*20; ++j) {
+            num = num * 10 + buffer[j] - '0';
+        }
+        seed[i] = num;
+        j++;
+        // printf("%lld\n", seed[i]);
+    }
+    char *outseed = rsa_decrypt(seed, 128, priv);
+    if (!outseed){
+        fprintf(stderr, "Error in decryption!\n");
+        return 1;
+    }
+    printf("The origin seed is: ");
+    for(int i=0; i < 128; i++){
+        printf("%c", outseed[i]);
+    } 
+    printf("\n");
+    // RSA_private_decrypt(128, (const unsigned char*)buffer, outseed, ClientRSA, RSA_NO_PADDING);
+    // printf("The origin seed is %s\n",outseed);
     //aes-key
     unsigned char aesSeed[32]; //If you use no-padding while encrypting the origin seed, it must be 128bytes, but we only need the first 32bytes.
     strncpy((char*)aesSeed,(const char*)outseed,32);
-    AES_KEY AESEncryptKey;
-    AES_set_encrypt_key(aesSeed, 256, &AESEncryptKey);
+    
+    unsigned char aes_exp_key [11 * 16] = {0};
+    aes_expand_key(aesSeed,aes_exp_key);
+
     printf("Negotiation completes.\n");
     unsigned char path[4097];
     unsigned char fname[4097];
@@ -102,11 +145,10 @@ int main(){
         fclose(sha);
         // jwj work
         memset(data_to_encrypt,0,sizeof(data_to_encrypt));
-        sendFile(fp,fsize,path,data_to_encrypt,data_after_encrypt,&AESEncryptKey,clnt_sock);
+        sendFile(fp,fsize,path,data_to_encrypt,data_after_encrypt,aes_exp_key,clnt_sock);
         fclose(fp);
     }
-    RSA_free(ClientRSA);
-    RSA_free(EncryptRsa);
+    free(outseed);
     close(serv_sock);
     return 0;
 }

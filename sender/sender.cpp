@@ -1,4 +1,5 @@
 #include "sender.h"
+#include "aes.h"
 
 int getServerSocket(const char *ip,int port){
     int serv_sock=socket(AF_INET,SOCK_STREAM,0);
@@ -107,7 +108,7 @@ int recvSeed(unsigned char *s_b,int s_len,int clnt_sock){
 }
 
 
-int sendFile(FILE* fp,unsigned long fsize,unsigned char *path,unsigned char *data_to_encrypt,unsigned char *data_after_encrypt,AES_KEY *AESEncryptKey,int clnt_sock){
+int sendFile(FILE* fp,unsigned long fsize,unsigned char *path,unsigned char *data_to_encrypt,unsigned char *data_after_encrypt,const unsigned char * AESEncryptKey,int clnt_sock){
     //send file size
     unsigned long times=((unsigned long)(fsize/16))+1;
     printf("File size:%lu bytes\n",fsize);
@@ -116,7 +117,8 @@ int sendFile(FILE* fp,unsigned long fsize,unsigned char *path,unsigned char *dat
     memset(p_fs,0,sizeof(p_fs));
     strncpy(p_fs,(const char*)fs,sizeof(fs));
     char e_fs[16];
-    AES_encrypt((unsigned char*)p_fs, (unsigned char*)e_fs, AESEncryptKey);
+    aes_encrypt((unsigned char*) p_fs,(unsigned char*)e_fs,AESEncryptKey);
+
     sendData((unsigned char*)e_fs,sizeof(e_fs),clnt_sock);
     //send file name
     const char ch='/';
@@ -131,13 +133,13 @@ int sendFile(FILE* fp,unsigned long fsize,unsigned char *path,unsigned char *dat
     }
     printf("File name:%s\n",fn);
     char e_fn[256];
-    AES_encrypt((unsigned char*)fn, (unsigned char*)e_fn, AESEncryptKey);
+    aes_encrypt((unsigned char *)fn, (unsigned char *) e_fn,AESEncryptKey);
     sendData((unsigned char*)e_fn,sizeof(e_fn),clnt_sock);
     //send data
     printf("Sending File...\n");
     for(unsigned long i=0;i<times;i++){
         fread(data_to_encrypt,16,1,fp);
-        AES_encrypt(data_to_encrypt, data_after_encrypt, AESEncryptKey);
+        aes_encrypt(data_to_encrypt,data_after_encrypt,AESEncryptKey);
         sendData(data_after_encrypt,16,clnt_sock);
     }
     printf("Completes!\n");
