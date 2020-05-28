@@ -69,6 +69,7 @@ int main()
     
     printf("Seed:%s\n", seed);
     long long *encrypted = rsa_encrypt((const char *)seed, SEED_LEN, pub);
+    printf("encrypt seed\n")
     if (!encrypted){
         fprintf(stderr, "Error in encryption!\n");
         return 1;
